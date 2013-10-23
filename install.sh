@@ -17,9 +17,7 @@ apt-get install build-essential python-dev libevent-dev python-pip nginx
 pip install -r requirements.txt
 
 # Install chefdash
-pushd chefdash
 python setup.py install
-popd
 
 # Upstart configuration
 cp -f upstart/chefdash.conf /etc/init/

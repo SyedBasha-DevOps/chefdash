@@ -1,7 +1,7 @@
 chefdash
 ========
 
-chefdash is a simple dashboard for tracking Chef_ runs across a cluster.
+chefdash is a simple dashboard for tracking [Chef](http://www.opscode.com/chef/) runs across a cluster.
 
 With chefdash you can:
 
@@ -26,7 +26,7 @@ Login as the newly created `chefdash` user:
 sudo -i -u chefdash
 ```
 
-If you already have a working knife configuration, just copy your `.chef` folder into the `chefdash` home folder (which is `/var/lib/chefdash`). Otherwise, set up knife according to Opscode's instructions_:
+If you already have a working knife configuration, just copy your `.chef` folder into the `chefdash` home folder (which is `/var/lib/chefdash`). Otherwise, set up knife according to Opscode's [instructions](http://docs.opscode.com/knife_configure.html):
 
 ```shell
 knife configure --initial
@@ -45,6 +45,3 @@ sudo service chefdash restart
 ```
 
 You're all set!
-
-.. _Chef: http://www.opscode.com/chef/
-.. _instructions: http://docs.opscode.com/knife_configure.html

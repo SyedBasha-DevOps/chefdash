@@ -39,6 +39,11 @@ ssh-keygen
 cat ~/.ssh/id_rsa.pub # Copy this public key into the /root/.ssh/authorized_keys file on each node
 ```
 
+`exit` out of the chefdash shell, then restart the chefdash service:
+```shell
+sudo service chefdash restart
+```
+
 You're all set!
 
 .. _instructions: http://docs.opscode.com/knife_configure.html

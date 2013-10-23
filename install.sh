@@ -11,7 +11,7 @@ fi
 
 # Install package dependencies
 apt-get update
-apt-get install build-essential python-dev libevent-dev python-pip nginx
+apt-get -y install build-essential python-dev libevent-dev python-pip nginx
 
 # Install python dependencies
 pip install -r requirements.txt
@@ -28,7 +28,7 @@ ln -fs /etc/nginx/sites-available/chefdash.conf /etc/nginx/sites-enabled/chefdas
 
 # User
 
-id -u chefdash &>/dev/null || useradd chefdash -r -m
+id -u chefdash &>/dev/null || useradd chefdash -r -m -s/bin/bash
 
 # Config directory
 
@@ -36,7 +36,8 @@ mkdir -p /etc/chefdash
 
 # Generate secret key and insert into the config file if necessary
 secret_key=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-[ -f /etc/chefdash/chefdash.py ] || (echo `SECRET_KEY=\'$secret_key\'` > /etc/chefdash/chefdash.py)
+[ -f /etc/chefdash/chefdash.py ] || (echo "SECRET_KEY='$secret_key'" > /etc/chefdash/chefdash.py)
+chmod 0600 /etc/chefdash/chefdash.py
 chown -R chefdash:chefdash /etc/chefdash
 
 # Log directory

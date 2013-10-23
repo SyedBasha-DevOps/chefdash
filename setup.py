@@ -10,6 +10,9 @@ setup(
 	packages = [
 		'chefdash',
 	],
+	package_data = {
+		'chefdash': ['static/*.png', 'static/*.ico', 'static/*.css', 'static/*.js', 'templates/*.html'],
+	},
 	url = 'http://github.com/sidebolt/chefdash/',
 	description = 'Chef Dash'
 )

@@ -114,7 +114,7 @@ def converge(env = None, node = None):
 		for n in nodes:
 			if not isinstance(n, chef.Node):
 				n = n.object
-			p = subprocess.Popen(['ssh', n['ipaddress'], 'sudo', 'chef-client'], shell = False, stdout = subprocess.PIPE)
+			p = subprocess.Popen(['ssh', '-o', 'StrictHostKeyChecking=no', n['ipaddress'], 'sudo', 'chef-client'], shell = False, stdout = subprocess.PIPE)
 			p.chunks = []
 			fcntl.fcntl(p.stdout, fcntl.F_SETFL, os.O_NONBLOCK)  # make the file nonblocking
 

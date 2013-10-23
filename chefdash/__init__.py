@@ -24,9 +24,8 @@ app = flask.Flask('chefdash')
 app.config.update(
 	DEBUG = True,
 	SECRET_KEY = 'dev',
+	LOG_FILE = '/var/log/chefdash/chefdash.log',
 )
-
-app.config.from_pyfile('/etc/chefdash/chefdash.py', silent = True)
 
 login_manager = flask.ext.login.LoginManager(app)
 
@@ -63,16 +62,22 @@ def feed():
 
 greenlets = {}
 
-def executing_processes(env = None):
+def executing_processes(env = None, node = None):
 	env_greenlets = greenlets.get(env)
 	if env_greenlets is None:
 		return 0
-	else:
+	elif node is None:
 		result = 0
 		for greenlet in env_greenlets.itervalues():
 			if not greenlet.ready():
 				result += 1
 		return result
+	else:
+		greenlet = env_greenlets.get(node)
+		if greenlet is None or greenlet.ready():
+			return 0
+		else:
+			return 1
 
 def broadcast(packet):
 	packet = ujson.encode(packet)
@@ -91,7 +96,7 @@ def converge(env = None, node = None):
 	if env is None and node is None:
 		flask.abort(400)
 
-	if executing_processes(env) > 0:
+	if executing_processes(env, node) > 0:
 		return ujson.encode({ 'status': 'converging' })
 	else:
 		env_greenlets = greenlets.get(env)

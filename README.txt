@@ -26,7 +26,7 @@ Login as the newly created `chefdash` user:
 sudo -i -u chefdash
 ```
 
-Set up knife according to the instructions_:
+If you already have a working knife configuration, just copy your `.chef` folder into the `chefdash` home folder (which is `/var/lib/chefdash`). Otherwise, set up knife according to Opscode's instructions_:
 
 ```shell
 knife configure --initial

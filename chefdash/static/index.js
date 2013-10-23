@@ -10,7 +10,6 @@ function run(url)
 var ws;
 function connect(url)
 {
-
 	ws = new WebSocket('ws://' + window.location.host + url);
 	ws.onmessage = function(msg)
 	{
@@ -31,13 +30,19 @@ function connect(url)
 			{
 				var h2 = $('h2[host="' + packet.host + '"]');
 				h2.attr('class', packet.status);
+				h2.find('button').text(packet.status);
+				if (packet.status == 'converging')
+				{
+					var pre = $('pre[host="' + packet.host + '"]');
+					pre.text('');
+				}
 			}
 		}
 		else if (packet.status)
 		{
 			$('#run')
 				.attr('class', packet.status)
-				.text(packet.status.charAt(0).toUpperCase() + packet.status.slice(1));
+				.text(packet.status);
 		}
 	};
 
@@ -53,6 +58,11 @@ function connect(url)
 
 $(document).ready(function()
 {
+	$('h2 button').click(function(event)
+	{
+		event.stopPropagation();
+	});
+
 	$('h2').click(function()
 	{
 		var console = $(this).next();

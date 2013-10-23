@@ -8,19 +8,29 @@ import fcntl
 import os
 import errno
 import sys
-import ujson
+import urllib
 
 import gevent.queue
 import gevent.event
+import ujson
 
 import flask
+import flask.ext.login
+
 import chef
 
 app = flask.Flask('chefdash')
 
-api = chef.autoconfigure()
+app.config.update(
+	DEBUG = True,
+	SECRET_KEY = 'dev',
+)
 
-app.debug = True
+app.config.from_pyfile('/etc/chefdash/chefdash.py', silent = True)
+
+login_manager = flask.ext.login.LoginManager(app)
+
+api = chef.autoconfigure()
 
 def handler(environ, start_response):
 	handled = False
@@ -47,6 +57,7 @@ def handle_websocket(ws):
 		websockets.remove(ws)
 
 @app.route('/feed')
+@flask.ext.login.login_required
 def feed():
 	flask.abort(400)
 
@@ -75,6 +86,7 @@ def broadcast(packet):
 
 @app.route('/converge/<env>', methods = ['POST'])
 @app.route('/converge/<env>/<node>', methods = ['POST'])
+@flask.ext.login.login_required
 def converge(env = None, node = None):
 	if env is None and node is None:
 		flask.abort(400)
@@ -85,16 +97,19 @@ def converge(env = None, node = None):
 		env_greenlets = greenlets.get(env)
 		if env_greenlets is None:
 			greenlets[env] = env_greenlets = { }
-		else:
-			env_greenlets.clear()
 
 		if node is not None:
-			nodes = [Node(node)]
+			nodes = [chef.Node(node, api = api)]
+			if node in env_greenlets:
+				del env_greenlets[node]
 		else:
 			nodes = chef.Search('node', 'chef_environment:' + env, api = api)
+			env_greenlets.clear()
 
 		for n in nodes:
-			p = subprocess.Popen(['ssh', n.object['ipaddress'], 'sudo', 'chef-client'], shell = False, stdout = subprocess.PIPE)
+			if not isinstance(n, chef.Node):
+				n = n.object
+			p = subprocess.Popen(['ssh', n['ipaddress'], 'sudo', 'chef-client'], shell = False, stdout = subprocess.PIPE)
 			p.chunks = []
 			fcntl.fcntl(p.stdout, fcntl.F_SETFL, os.O_NONBLOCK)  # make the file nonblocking
 
@@ -131,15 +146,16 @@ def converge(env = None, node = None):
 
 				return process.returncode
 
-			greenlet = gevent.spawn(read, host = n.object.name, process = p)
+			greenlet = gevent.spawn(read, host = n.name, process = p)
 			greenlet.process = p
-			env_greenlets[n.object.name] = greenlet
+			env_greenlets[n.name] = greenlet
 
 		broadcast({ 'status': 'converging' })
 
 		return ujson.encode({ 'status': 'converging' if len(nodes) > 0 else 'ready' })
 
 @app.route('/')
+@flask.ext.login.login_required
 def index():
 	envs = chef.Environment.list(api = api)
 	return flask.render_template(
@@ -148,8 +164,10 @@ def index():
 	)
 
 @app.route('/<env>')
+@flask.ext.login.login_required
 def env(env):
-	nodes = chef.Search('node', 'chef_environment:%s' % env, api = api)
+	nodes = list(chef.Search('node', 'chef_environment:%s' % env, api = api))
+	nodes.sort(key = lambda node: node.object.name)
 
 	env_greenlets = greenlets.get(env)
 	if env_greenlets is None:
@@ -176,4 +194,83 @@ def env(env):
 		status = status,
 		output = output,
 		nodes = nodes,
+	)
+
+@login_manager.user_loader
+class User(object):
+	def __init__(self, id):
+		self.id = id
+	
+	def is_authenticated(self):
+		return True
+
+	def is_active(self):
+		return True
+
+	def is_anonymous(self):
+		return False
+
+	def get_id(self):
+		return self.id
+
+	#def get_auth_token(self):
+		#return flask.ext.login.make_secure_token(self.id)
+
+login_manager.login_view = 'login'
+
+@app.template_filter('urlquote')
+def urlquote(url):
+	return urllib.quote(url, '')
+
+@app.route('/login', methods = ['GET', 'POST'])
+def login():
+	if flask.ext.login.current_user.is_authenticated():
+		return flask.redirect(request.args.get('next') or flask.url_for('index'))
+
+	username = flask.request.form.get('username')
+	remember = flask.request.form.get('remember') == 'on'
+
+	if username is not None:
+
+		password = flask.request.form.get('password')
+
+		try:
+
+			auth_result = ujson.decode(api.request('POST', '/authenticate_user', data = ujson.encode({ 'name': username, 'password': password })))
+
+			if auth_result.get('name') == username and auth_result.get('verified'):
+
+				flask.ext.login.login_user(User(username), remember = remember)
+
+				return flask.redirect(flask.request.args.get('next') or flask.url_for('index'))
+
+			else:
+				raise Exception, 'Invalid credentials'
+
+		except Exception:
+			return flask.render_template('login.html',
+				username = username,
+				error = True,
+				remember = remember,
+				next = flask.request.args.get('next'),
+			)
+
+	return flask.render_template('login.html',
+		username = None,
+		error = False,
+		remember = remember,
+		next = flask.request.args.get('next'),
+	)
+
+@app.route('/logout')
+def logout():
+	flask.ext.login.logout_user()
+	return flask.redirect(flask.url_for('login'))
+
+@app.route('/favicon.ico')
+def favicon():
+	return flask.send_from_directory(
+		os.path.join(app.root_path, 'static'),
+		'favicon.ico',
+		mimetype = 'image/vnd.microsoft.icon',
 	)

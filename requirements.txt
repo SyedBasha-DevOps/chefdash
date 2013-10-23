@@ -1,5 +1,6 @@
 PyChef==0.2.2
 Flask==0.10.1
+Flask-Login==0.2.7
 gevent==0.13.8
 gevent-websocket==0.3.6
 ujson==1.33

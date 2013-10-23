@@ -28,7 +28,7 @@ ln -fs /etc/nginx/sites-available/chefdash.conf /etc/nginx/sites-enabled/chefdas
 
 # User
 
-id -u chefdash &>/dev/null || useradd chefdash -r -m -s/bin/bash
+id -u chefdash &>/dev/null || useradd chefdash -r -d/var/lib/chefdash -m -s/bin/bash
 
 # Config directory
 

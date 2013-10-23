@@ -40,6 +40,7 @@ cat ~/.ssh/id_rsa.pub # Copy this public key into the /root/.ssh/authorized_keys
 ```
 
 `exit` out of the chefdash shell, then restart the chefdash service:
+
 ```shell
 sudo service chefdash restart
 ```

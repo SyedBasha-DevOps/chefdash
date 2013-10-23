@@ -239,20 +239,15 @@ def login():
 
 		password = flask.request.form.get('password')
 
-		try:
+		auth_result = ujson.decode(api.request('POST', '/authenticate_user', data = ujson.encode({ 'name': username, 'password': password })))
 
-			auth_result = ujson.decode(api.request('POST', '/authenticate_user', data = ujson.encode({ 'name': username, 'password': password })))
+		if auth_result.get('name') == username and auth_result.get('verified'):
 
-			if auth_result.get('name') == username and auth_result.get('verified'):
+			flask.ext.login.login_user(User(username), remember = remember)
 
-				flask.ext.login.login_user(User(username), remember = remember)
+			return flask.redirect(flask.request.args.get('next') or flask.url_for('index'))
 
-				return flask.redirect(flask.request.args.get('next') or flask.url_for('index'))
-
-			else:
-				raise Exception, 'Invalid credentials'
-
-		except Exception:
+		else:
 			return flask.render_template('login.html',
 				username = username,
 				error = True,

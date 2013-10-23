@@ -39,6 +39,14 @@ ssh-keygen
 cat ~/.ssh/id_rsa.pub # Copy this public key into the /root/.ssh/authorized_keys file on each node
 ```
 
+And without a username:
+```shell
+vim ~/.ssh/config
+# Sample configuration telling SSH to login as  user "ubuntu" on all nodes:
+# Host *
+#   User ubuntu
+```
+
 `exit` out of the chefdash shell, then restart the chefdash service:
 
 ```shell

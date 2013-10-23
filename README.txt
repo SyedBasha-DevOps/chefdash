@@ -14,6 +14,7 @@ Install
 Clone the source and run the install script (only works on Ubuntu for now):
 
 ```shell
+sudo apt-get install git
 git clone <source url> chefdash
 cd chefdash
 sudo ./install.sh

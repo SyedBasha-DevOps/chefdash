@@ -10,15 +10,16 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # Install package dependencies
+apt-get update
 apt-get install build-essential python-dev libevent-dev python-pip nginx
-
-pushd chefdash
 
 # Install python dependencies
 pip install -r requirements.txt
 
 # Install chefdash
+pushd chefdash
 python setup.py install
+popd
 
 # Upstart configuration
 cp -f upstart/chefdash.conf /etc/init/
@@ -26,8 +27,6 @@ cp -f upstart/chefdash.conf /etc/init/
 # nginx configuration
 cp -f nginx/chefdash.conf /etc/nginx/sites-available
 ln -fs /etc/nginx/sites-available/chefdash.conf /etc/nginx/sites-enabled/chefdash.conf
-
-popd
 
 # User
 

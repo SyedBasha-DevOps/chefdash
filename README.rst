@@ -46,4 +46,5 @@ sudo service chefdash restart
 
 You're all set!
 
+.. _Chef: http://www.opscode.com/chef/
 .. _instructions: http://docs.opscode.com/knife_configure.html

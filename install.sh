@@ -43,7 +43,7 @@ chmod 0600 /etc/chefdash/chefdash.py
 chown -R chefdash:chefdash /etc/chefdash
 
 # SSL certificates
-if [ ! -f /var/lib/chefdash/server.crt ];
+if [ ! -f /var/lib/chefdash/ssl.crt ];
 then
 	openssl genrsa -out /var/lib/chefdash/ssl.key 2048
 	openssl req -new -key /var/lib/chefdash/ssl.key -out /var/lib/chefdash/ssl.csr

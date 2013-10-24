@@ -39,7 +39,7 @@ mkdir -p /etc/chefdash
 
 # Generate secret key and insert into the config file if necessary
 secret_key=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-[ -f /etc/chefdash/chefdash.py ] || (echo "SECRET_KEY='$secret_key'" > /etc/chefdash/chefdash.py)
+[ -f /etc/chefdash/chefdash.py ] || (echo -e "SECRET_KEY='$secret_key'\nLOG_FILE='/var/log/chefdash/chefdash.log\nDEBUG=False'" > /etc/chefdash/chefdash.py)
 chmod 0600 /etc/chefdash/chefdash.py
 chown -R chefdash:chefdash /etc/chefdash
 

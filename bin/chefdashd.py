@@ -21,7 +21,12 @@ if __name__ == '__main__':
 		port = int(server_name[1])
 
 	if not chefdash.app.debug:
-		logging.basicConfig(filename = chefdash.app.config['LOG_FILE'], level = logging.INFO)
+		filename = chefdash.app.config['LOG_FILE']
+		if filename:
+			handler = logging.FileHandler(filename)
+			formatter = logging.Formatter(chefdash.app.config['LOG_FORMAT'])
+			handler.setFormatter(formatter)
+			chefdash.app.logger.addHandler(handler)
 
 	server = gevent.pywsgi.WSGIServer((host, port), chefdash.handler, handler_class = geventwebsocket.handler.WebSocketHandler)
 	server.serve_forever()

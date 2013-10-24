@@ -19,12 +19,16 @@ import flask.ext.login
 
 import chef
 
+import logging
+
 app = flask.Flask('chefdash')
 
 app.config.update(
 	DEBUG = True,
 	SECRET_KEY = 'dev',
-	LOG_FILE = '/var/log/chefdash/chefdash.log',
+	LOG_FILE = None,
+	LOG_FORMAT = '%(asctime)s %(name)s\t%(levelname)s\t%(message)s',
+	LOG_LEVEL = logging.WARNING,
 )
 
 login_manager = flask.ext.login.LoginManager(app)

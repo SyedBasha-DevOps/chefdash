@@ -45,9 +45,10 @@ chown -R chefdash:chefdash /etc/chefdash
 # SSL certificates
 if [ ! -f /var/lib/chefdash/server.crt ];
 then
-	sudo -u nginx openssl genrsa -out /var/lib/chefdash/ssl.key 2048
-	sudo -u nginx openssl req -new -key /var/lib/chefdash/ssl.key -out /var/lib/chefdash/ssl.csr
-	sudo -u nginx openssl x509 -req -days 7304 -in /var/lib/chefdash/ssl.csr -signkey /var/lib/chefdash/ssl.key -out /var/lib/chefdash/ssl.crt
+	openssl genrsa -out /var/lib/chefdash/ssl.key 2048
+	openssl req -new -key /var/lib/chefdash/ssl.key -out /var/lib/chefdash/ssl.csr
+	openssl x509 -req -days 7304 -in /var/lib/chefdash/ssl.csr -signkey /var/lib/chefdash/ssl.key -out /var/lib/chefdash/ssl.crt
+	chown nginx:nginx /var/lib/chefdash/ssl.*
 fi
 
 # Log directory

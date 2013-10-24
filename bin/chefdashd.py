@@ -28,8 +28,11 @@ if __name__ == '__main__':
 		if filename:
 			handler = logging.FileHandler(filename)
 			handler.setLevel(chefdash.app.config['LOG_LEVEL'])
+
 			formatter = logging.Formatter(chefdash.app.config['LOG_FORMAT'])
 			handler.setFormatter(formatter)
+
+			chefdash.app.logger.setLevel(chefdash.app.config['LOG_LEVEL'])
 			chefdash.app.logger.addHandler(handler)
 	
 	chefdash.app.logger.info('Listening on %s:%d' % (host, port))

@@ -10,6 +10,8 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # Install package dependencies
+sudo add-apt-repository 'deb http://nginx.org/packages/ubuntu/ precise nginx'
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys ABF5BD827BD9BF62
 apt-get update
 apt-get -y install build-essential python-dev libevent-dev python-pip nginx
 
@@ -23,8 +25,8 @@ python setup.py install
 cp -f upstart/chefdash.conf /etc/init/
 
 # nginx configuration
-cp -f nginx/chefdash.conf /etc/nginx/sites-available
-ln -fs /etc/nginx/sites-available/chefdash.conf /etc/nginx/sites-enabled/chefdash.conf
+rm -f /etc/nginx/conf.d/default.conf
+cp -f nginx/chefdash.conf /etc/nginx/conf.d/
 
 # User
 
@@ -39,6 +41,14 @@ secret_key=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
 [ -f /etc/chefdash/chefdash.py ] || (echo "SECRET_KEY='$secret_key'" > /etc/chefdash/chefdash.py)
 chmod 0600 /etc/chefdash/chefdash.py
 chown -R chefdash:chefdash /etc/chefdash
+
+# SSL certificates
+if [ ! -f /var/lib/chefdash/server.crt ];
+then
+	sudo -u nginx openssl genrsa -out /var/lib/chefdash/ssl.key 2048
+	sudo -u nginx openssl req -new -key /var/lib/chefdash/ssl.key -out /var/lib/chefdash/ssl.csr
+	sudo -u nginx openssl x509 -req -days 7304 -in /var/lib/chefdash/ssl.csr -signkey /var/lib/chefdash/ssl.key -out /var/lib/chefdash/ssl.crt
+fi
 
 # Log directory
 mkdir -p /var/log/chefdash

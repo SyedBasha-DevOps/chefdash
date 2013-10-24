@@ -20,6 +20,10 @@ cd chefdash
 sudo ./install.sh
 ```
 
+*Note: the install script is **idempotent**, which means if you want to upgrade to the latest chefdash, you can just `git pull` and run the script again.*
+
+*Also note: chefdash attempts to install nginx 1.4 or higher from the nginx deb repo. If you already have an older version of nginx installed, you'll need to remove it.*
+
 Login as the newly created `chefdash` user:
 
 ```shell

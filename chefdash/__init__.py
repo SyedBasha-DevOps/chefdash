@@ -37,31 +37,34 @@ api = chef.autoconfigure()
 
 def handler(environ, start_response):
 	handled = False
-	if environ['PATH_INFO'] == '/feed':
+	if environ['PATH_INFO'].startswith('/feed/'):
 		ws = environ.get('wsgi.websocket')
 		if ws:
-			handle_websocket(ws)
+			handle_websocket(ws, environ['PATH_INFO'][6:])
 			handled = True
 	
 	if not handled:
 		return app(environ, start_response)
 
-websockets = []
+websockets = {}
 
-def handle_websocket(ws):
-	websockets.append(ws)
+def handle_websocket(ws, env):
+	s = websockets.get(env)
+	if s is None:
+		s = websockets[env] = []
+	s.append(ws)
 
 	while True:
 		buf = ws.receive()
 		if buf is None:
 			break
 
-	if ws in websockets:
-		websockets.remove(ws)
+	if ws in s:
+		s.remove(ws)
 
-@app.route('/feed')
+@app.route('/feed/<env>')
 @flask.ext.login.login_required
-def feed():
+def feed(env = None):
 	flask.abort(400)
 
 greenlets = {}
@@ -83,15 +86,17 @@ def executing_processes(env = None, node = None):
 		else:
 			return 1
 
-def broadcast(packet):
-	packet = ujson.encode(packet)
-	for ws in list(websockets):
-		if ws.socket is not None:
-			try:
-				ws.send(packet)
-			except gevent.socket.error:
-				if ws in websockets:
-					websockets.remove(ws)
+def broadcast(env, packet):
+	sockets = websockets.get(env)
+	if sockets is not None:
+		packet = ujson.encode(packet)
+		for ws in list(sockets):
+			if ws.socket is not None:
+				try:
+					ws.send(packet)
+				except gevent.socket.error:
+					if ws in sockets:
+						sockets.remove(ws)
 
 @app.route('/converge/<env>', methods = ['POST'])
 @app.route('/converge/<env>/<node>', methods = ['POST'])
@@ -123,7 +128,7 @@ def converge(env = None, node = None):
 			fcntl.fcntl(p.stdout, fcntl.F_SETFL, os.O_NONBLOCK)  # make the file nonblocking
 
 			def read(host, process):
-				broadcast({ 'host': host, 'status': 'converging' })
+				broadcast(env, { 'host': host, 'status': 'converging' })
 
 				while True:
 					chunk = None
@@ -140,7 +145,7 @@ def converge(env = None, node = None):
 
 					if chunk:
 						process.chunks.append(chunk)
-						broadcast({ 'host': host, 'data': chunk, })
+						broadcast(env, { 'host': host, 'data': chunk, })
 
 					gevent.socket.wait_read(process.stdout.fileno())
 
@@ -148,10 +153,10 @@ def converge(env = None, node = None):
 
 				process.wait()
 
-				broadcast({ 'host': host, 'status': 'ready' if process.returncode == 0 else 'error' })
+				broadcast(env, { 'host': host, 'status': 'ready' if process.returncode == 0 else 'error' })
 
 				if executing_processes(env) <= 1:
-					broadcast({ 'status': 'ready' })
+					broadcast(env, { 'status': 'ready' })
 
 				return process.returncode
 
@@ -159,7 +164,7 @@ def converge(env = None, node = None):
 			greenlet.process = p
 			env_greenlets[n.name] = greenlet
 
-		broadcast({ 'status': 'converging' })
+		broadcast(env, { 'status': 'converging' })
 
 		return ujson.encode({ 'status': 'converging' if len(nodes) > 0 else 'ready' })
 

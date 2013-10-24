@@ -28,7 +28,7 @@ app.config.update(
 	SECRET_KEY = 'dev',
 	LOG_FILE = None,
 	LOG_FORMAT = '%(asctime)s %(name)s\t%(levelname)s\t%(message)s',
-	LOG_LEVEL = logging.WARNING,
+	LOG_LEVEL = logging.INFO,
 )
 
 login_manager = flask.ext.login.LoginManager(app)

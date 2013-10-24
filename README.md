@@ -11,50 +11,65 @@ With chefdash you can:
 Install
 -------
 
-Clone the source and run the install script (only works on Ubuntu for now):
+1. **Clone the source and run the install script** (only works on Ubuntu for now)
 
-```shell
-sudo apt-get install git
-git clone <source url> chefdash
-cd chefdash
-sudo ./install.sh
-```
+	__Warning__: the install script attempts to install nginx 1.4 or higher from the nginx deb repo. If you already have an older version of nginx installed, you'll need to remove it. (1.4 is required for websocket proxying)
 
-*Note: the install script is **idempotent**, which means if you want to upgrade to the latest chefdash, you can just `git pull` and run the script again.*
+	```shell
+	sudo apt-get install git
+	git clone <source url> chefdash
+	cd chefdash
+	sudo ./install.sh
+	```
 
-*Also note: chefdash attempts to install nginx 1.4 or higher from the nginx deb repo. If you already have an older version of nginx installed, you'll need to remove it.*
+	*__Note__: the install script is __idempotent__, which means if you want to upgrade to the latest chefdash, you can just `git pull` and run the script again.*
 
-Login as the newly created `chefdash` user:
+2. **Login as the newly created `chefdash` user**
 
-```shell
-sudo -i -u chefdash
-```
+	```shell
+	sudo -i -u chefdash
+	```
 
-If you already have a working knife configuration, just copy your `.chef` folder into the `chefdash` home folder (which is `/var/lib/chefdash`). Otherwise, set up knife according to Opscode's [instructions](http://docs.opscode.com/knife_configure.html):
+3. **Configure access to the Chef server**
 
-```shell
-knife configure --initial
-```
+	If you already have a working knife configuration, just copy your `.chef` folder into the `chefdash` home folder (which is `/var/lib/chefdash`). Otherwise, set up knife according to Opscode's [instructions](http://docs.opscode.com/knife_configure.html):
 
-Make sure the chefdash user has the ability to SSH into the nodes as root without a password:
+	```shell
+	knife configure --initial
+	```
 
-```shell
-ssh-keygen
-cat ~/.ssh/id_rsa.pub # Copy this public key into the /root/.ssh/authorized_keys file on each node
-```
+4. **Configure SSH**
 
-And without a username:
-```shell
-vim ~/.ssh/config
-# Sample configuration telling SSH to login as  user "ubuntu" on all nodes:
-# Host *
-#   User ubuntu
-```
+	Make sure the chefdash user has the ability to SSH into the nodes as root without a password:
 
-`exit` out of the chefdash shell, then restart the chefdash service:
+	```shell
+	ssh-keygen
+	cat ~/.ssh/id_rsa.pub # Copy this public key into the /root/.ssh/authorized_keys file on each node
+	```
 
-```shell
-sudo service chefdash restart
-```
+	> Worried about passwordless root access? Create a `chefdash` user on each of your nodes, then put this line in the `/etc/sudoers` file:
+	>
+	> ```shell
+	> chefdash ALL=(ALL) NOPASSWD: /usr/bin/chef-client
+	> ```
+	> 
+	> This will allow the chefdash user to only execute `chef-client` as root.
+
+	chefdash doesn't know what user to login as on your nodes. [Configure SSH](http://nerderati.com/2011/03/simplify-your-life-with-an-ssh-config-file/) to automatically fill in the correct usernames:
+
+	```shell
+	vim ~/.ssh/config
+	# Sample configuration telling SSH to login as  user "ubuntu" on all nodes:
+	# Host *
+	#   User ubuntu
+	```
+
+6. **Finish up**
+
+	`exit` out of the chefdash shell, then restart the chefdash service:
+
+	```shell
+	sudo service chefdash restart
+	```
 
 You're all set!

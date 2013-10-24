@@ -10,7 +10,7 @@ function run(url)
 var ws;
 function connect(url)
 {
-	ws = new WebSocket('ws://' + window.location.host + url);
+	ws = new WebSocket((window.location.protocol == 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + url);
 	ws.onmessage = function(msg)
 	{
 		var packet = JSON.parse(msg.data);

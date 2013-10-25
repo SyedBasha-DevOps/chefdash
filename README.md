@@ -81,27 +81,27 @@ chefdash can bootstrap new nodes if you set it up correctly.
 
 1. **Install knife**
 
-```shell
-curl -L https://www.opscode.com/chef/install.sh | sudo bash
-```
+	```shell
+	curl -L https://www.opscode.com/chef/install.sh | sudo bash
+	```
 
 2. **Set up knife**
 
-You'll need the Chef validator key from your Chef server. You can find it in `/etc/chef-server/`.
+	You'll need the Chef validator key from your Chef server. You can find it in `/etc/chef-server/`.
 
-```shell
-sudo cp chef-validator.pem /var/lib/chefdash/.chef/
-sudo vim /var/lib/chefdash/.chef/knife.rb
-# Set values for validation_client_name and validation_key
-# For example:
-# validation_client_name 'chef-validator'
-# validation_key '/var/lib/chefdash/.chef/chef-validator.pem'
-```
+	```shell
+	sudo cp chef-validator.pem /var/lib/chefdash/.chef/
+	sudo vim /var/lib/chefdash/.chef/knife.rb
+	# Set values for validation_client_name and validation_key
+	# For example:
+	# validation_client_name 'chef-validator'
+	# validation_key '/var/lib/chefdash/.chef/chef-validator.pem'
+	```
 
 3. **Restart chefdash**
 
-```shell
-sudo service chefdash restart
-```
+	```shell
+	sudo service chefdash restart
+	```
 
-You should see a "bootstrap" button on the homepage.
+	You should see a "bootstrap" button on the homepage.

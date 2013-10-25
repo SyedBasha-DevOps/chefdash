@@ -132,7 +132,6 @@ def converge(env, node = None):
 		nodes,
 		get_command,
 		env = env,
-		node = node,
 		progress_status = 'converging',
 	)
 

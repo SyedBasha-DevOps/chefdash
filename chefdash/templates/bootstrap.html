@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}bootstrap{% endblock %}
+
+{% block extrahead %}
+	<script src="{{ url_for('static', filename = 'index.js') }}"></script>
+	<script>
+		$(document).ready(function()
+		{
+			connect('{{ url_for('feed', env = '') }}');
+		});
+
+		function bootstrap()
+		{
+			var ip = $('#ip').val();
+			var click = function()
+			{
+				run('{{ url_for('bootstrap', ip = '') }}' + ip);
+			};
+			add(ip, $('#body'), click);
+			click();
+			return false;
+		}
+	</script>
+{% endblock %}
+
+{% block header %}
+	<a class="left button" href="{{ url_for('index') }}">Back</a>
+	<div style="float: right;">
+		<form onsubmit="return bootstrap()">
+		<input type="text" id="ip" placeholder="IP or hostname" autofocus /> <input type="submit" value="Bootstrap" />
+		</form>
+	</div>
+{% endblock %}
+
+{% block body %}
+	{% for node in nodes %}
+		<h2 class="{{ status[node] }}" host="{{ node }}">
+			<button onclick="run('{{ url_for('bootstrap', ip = node) }}')" class="{{ status[node] }}">{{ status[node] }}</button>
+			{{ node }}
+		</h2>
+		<div class="console">
+			<pre host="{{ node }}">{{ output[node] }}</pre>
+		</div>
+	{% endfor %}
+{% endblock %}

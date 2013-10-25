@@ -11,7 +11,7 @@ if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		chefdash.app.config.from_pyfile(sys.argv[1])
 
-	host = 'localhost'
+	host = '0.0.0.0'
 	port = 5000
 
 	server_name = chefdash.app.config.get('SERVER_NAME')

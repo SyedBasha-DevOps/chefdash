@@ -7,6 +7,39 @@ function run(url)
 	});
 }
 
+function h2_clicked()
+{
+	var console = $(this).next();
+	console.toggleClass('expanded');
+	console.scrollTop(console.children().first().height());
+}
+
+function add(node, $parent, click)
+{
+	if ($('h2[host="' + node + '"]').length > 0)
+		return;
+
+	var $h2 = $(
+		'<h2 class="ready" host="' + node + '">'
+		+ '<button class="ready">ready</button> ' + node
+		+ '</h2>'
+	);
+	$parent.prepend($h2);
+
+	$h2.click(h2_clicked);
+	$h2.find('button').click(function(event)
+	{
+		event.stopPropagation();
+		click();
+	});
+
+	$h2.after(
+		'<div class="console">'
+		+ '<pre host="' + node + '"></pre>'
+		+ '</div>'
+	);
+}
+
 var ws;
 function connect(url)
 {
@@ -16,25 +49,26 @@ function connect(url)
 		var packet = JSON.parse(msg.data);
 		if (packet.host)
 		{
-			if (packet.data)
+			var h2 = $('h2[host="' + packet.host + '"]');
+			if (h2.length > 0)
 			{
-				var pre = $('pre[host="' + packet.host + '"]');
-				var addition = $(document.createTextNode(packet.data));
-				pre.append(addition);
-				pre.parent().scrollTop(pre.height());
-
-				var h2 = $('h2[host="' + packet.host + '"]');
-				h2.attr('class', 'converging');
-			}
-			else if (packet.status)
-			{
-				var h2 = $('h2[host="' + packet.host + '"]');
-				h2.attr('class', packet.status);
-				h2.find('button').text(packet.status);
-				if (packet.status == 'converging')
+				if (packet.data)
 				{
 					var pre = $('pre[host="' + packet.host + '"]');
-					pre.text('');
+					var addition = $(document.createTextNode(packet.data));
+					pre.append(addition);
+					pre.parent().scrollTop(pre.height());
+				}
+
+				if (packet.status)
+				{
+					h2.attr('class', packet.status);
+					h2.find('button').text(packet.status);
+					if (packet.status != 'error' && packet.status != 'ready')
+					{
+						var pre = $('pre[host="' + packet.host + '"]');
+						pre.text('');
+					}
 				}
 			}
 		}
@@ -63,12 +97,7 @@ $(document).ready(function()
 		event.stopPropagation();
 	});
 
-	$('h2').click(function()
-	{
-		var console = $(this).next();
-		console.toggleClass('expanded');
-		console.scrollTop(console.children().first().height());
-	});
+	$('h2').click(h2_clicked);
 
 	$('pre').each(function()
 	{

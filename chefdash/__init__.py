@@ -9,6 +9,7 @@ import os
 import errno
 import sys
 import urllib
+import distutils.spawn
 
 import gevent.queue
 import gevent.event
@@ -31,16 +32,24 @@ app.config.update(
 	LOG_LEVEL = logging.INFO,
 )
 
+BOOTSTRAP_ENV = '__chefdash_bootstrap__'
+
+if distutils.spawn.find_executable('knife'):
+	bootstrap_enabled = True
+else:
+	bootstrap_enabled = False
+
 login_manager = flask.ext.login.LoginManager(app)
 
 api = chef.autoconfigure()
 
 def handler(environ, start_response):
 	handled = False
-	if environ['PATH_INFO'].startswith('/feed/'):
+	path = environ['PATH_INFO']
+	if path.startswith('/feed/'):
 		ws = environ.get('wsgi.websocket')
 		if ws:
-			handle_websocket(ws, environ['PATH_INFO'][6:])
+			handle_websocket(ws, path[6:])
 			handled = True
 	
 	if not handled:
@@ -49,6 +58,9 @@ def handler(environ, start_response):
 websockets = {}
 
 def handle_websocket(ws, env):
+	if not env:
+		env = BOOTSTRAP_ENV
+
 	s = websockets.get(env)
 	if s is None:
 		s = websockets[env] = []
@@ -69,22 +81,22 @@ def feed(env = None):
 
 greenlets = {}
 
-def executing_processes(env = None, node = None):
+def processes(env = None, node = None, only_executing = True):
 	env_greenlets = greenlets.get(env)
 	if env_greenlets is None:
-		return 0
+		return []
 	elif node is None:
-		result = 0
+		result = []
 		for greenlet in env_greenlets.itervalues():
-			if not greenlet.ready():
-				result += 1
+			if not only_executing or not greenlet.ready():
+				result.append(greenlet)
 		return result
 	else:
 		greenlet = env_greenlets.get(node)
-		if greenlet is None or greenlet.ready():
-			return 0
+		if greenlet is None or (only_executing and greenlet.ready()):
+			return []
 		else:
-			return 1
+			return [greenlet,]
 
 def broadcast(env, packet):
 	sockets = websockets.get(env)
@@ -101,72 +113,131 @@ def broadcast(env, packet):
 @app.route('/converge/<env>', methods = ['POST'])
 @app.route('/converge/<env>/<node>', methods = ['POST'])
 @flask.ext.login.login_required
-def converge(env = None, node = None):
-	if env is None and node is None:
+def converge(env, node = None):
+
+	if env == BOOTSTRAP_ENV:
 		flask.abort(400)
 
-	if executing_processes(env, node) > 0:
+	if len(processes(env, node, only_executing = True)) > 0:
 		return ujson.encode({ 'status': 'converging' })
+
+	if node is not None:
+		nodes = { node: chef.Node(node, api = api), }
 	else:
-		env_greenlets = greenlets.get(env)
-		if env_greenlets is None:
-			greenlets[env] = env_greenlets = { }
+		nodes = { (row.object.name, row.object) for row in chef.Search('node', 'chef_environment:' + env, api = api) }
+	
+	get_command = lambda n: ['ssh', '-o', 'StrictHostKeyChecking=no', n['ipaddress'], 'sudo', 'chef-client']
 
-		if node is not None:
-			nodes = [chef.Node(node, api = api)]
-			if node in env_greenlets:
-				del env_greenlets[node]
-		else:
-			nodes = chef.Search('node', 'chef_environment:' + env, api = api)
-			env_greenlets.clear()
+	return _run(
+		nodes,
+		get_command,
+		env = env,
+		node = node,
+		progress_status = 'converging',
+	)
 
-		for n in nodes:
-			if not isinstance(n, chef.Node):
-				n = n.object
-			p = subprocess.Popen(['ssh', '-o', 'StrictHostKeyChecking=no', n['ipaddress'], 'sudo', 'chef-client'], shell = False, stdout = subprocess.PIPE)
-			p.chunks = []
-			fcntl.fcntl(p.stdout, fcntl.F_SETFL, os.O_NONBLOCK)  # make the file nonblocking
+if bootstrap_enabled:
+	@app.route('/bootstrap')
+	@flask.ext.login.login_required
+	def bootstrap_list():
+		nodes = greenlets.get(BOOTSTRAP_ENV, {}).keys()
+		status, output, executing = get_env_status(BOOTSTRAP_ENV, nodes, progress_status = 'bootstrapping')
+		return flask.render_template(
+			'bootstrap.html',
+			status = status,
+			output = output,
+			nodes = nodes,
+		)
 
-			def read(host, process):
-				broadcast(env, { 'host': host, 'status': 'converging' })
+	@app.route('/bootstrap/<ip>', methods = ['POST'])
+	@flask.ext.login.login_required
+	def bootstrap(ip):
 
-				while True:
+		if len(processes(BOOTSTRAP_ENV, ip, only_executing = True)) > 0:
+			return ujson.encode({ 'status': 'bootstrapping' })
+
+		if len(chef.Search('node', 'ipaddress:%s OR fqdn:%s OR hostname:%s' % (ip, ip, ip), api = api)) > 0:
+			broadcast(BOOTSTRAP_ENV, { 'host': ip, 'status': 'ready', 'data': 'A node already exists at this address.\n' })
+			return ujson.encode({ 'status': 'ready' })
+
+		get_command = lambda ip: ['knife', 'bootstrap', '--sudo', ip]
+
+		return _run(
+			{ ip: ip, },
+			get_command,
+			env = BOOTSTRAP_ENV,
+			progress_status = 'bootstrapping',
+		)
+
+def _run(nodes, get_command, env, progress_status):
+	# nodes: dictionary of node names mapped to node objects
+	# Node objects can be anything. They're just passed to the get_command function
+
+	# get_command: function that takes a node object and returns a command to execute via Popen
+	
+	# env: name of the environment
+
+	# progress_status: the status to broadcast to the websockets when the command is executing
+
+	env_greenlets = greenlets.get(env)
+	if env_greenlets is None:
+		greenlets[env] = env_greenlets = { }
+
+	for node in nodes:
+		try:
+			del env_greenlets[node]
+		except KeyError:
+			pass
+
+	for hostname in nodes:
+		node_object = nodes[hostname]
+		p = subprocess.Popen(get_command(node_object), shell = False, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+		p.chunks = [] # Chunks of stdout data
+		fcntl.fcntl(p.stdout, fcntl.F_SETFL, os.O_NONBLOCK) # make the file nonblocking
+
+		def read(host, process):
+			broadcast(env, { 'host': host, 'status': progress_status })
+
+			while True:
+				chunk = None
+				try:
+					chunk = process.stdout.read(4096)
+					if not chunk:
+						break
+
+				except IOError, e:
 					chunk = None
-					try:
-						chunk = process.stdout.read(4096)
-						if not chunk:
-							break
+					if e[0] != errno.EAGAIN:
+						raise
+					sys.exc_clear()
 
-					except IOError, e:
-						chunk = None
-						if e[0] != errno.EAGAIN:
-							raise
-						sys.exc_clear()
+				if chunk:
+					process.chunks.append(chunk)
+					broadcast(env, { 'host': host, 'data': chunk, })
 
-					if chunk:
-						process.chunks.append(chunk)
-						broadcast(env, { 'host': host, 'data': chunk, })
+				gevent.socket.wait_read(process.stdout.fileno())
 
-					gevent.socket.wait_read(process.stdout.fileno())
+			process.stdout.close()
 
-				process.stdout.close()
+			process.wait()
 
-				process.wait()
+			errors = process.stderr.read()
+			process.chunks.append(errors)
 
-				broadcast(env, { 'host': host, 'status': 'ready' if process.returncode == 0 else 'error' })
+			broadcast(env, { 'host': host, 'status': 'ready' if process.returncode == 0 else 'error', 'data': errors })
 
-				if executing_processes(env) <= 1:
-					broadcast(env, { 'status': 'ready' })
+			if len(processes(env, only_executing = True)) <= 1:
+				broadcast(env, { 'status': 'ready' })
 
-				return process.returncode
+			return process.returncode
 
-			greenlet = gevent.spawn(read, host = n.name, process = p)
-			greenlet.process = p
-			env_greenlets[n.name] = greenlet
+		greenlet = gevent.spawn(read, host = hostname, process = p)
+		greenlet.process = p
+		env_greenlets[hostname] = greenlet
 
-		broadcast(env, { 'status': 'converging' })
+	broadcast(env, { 'status': progress_status })
 
-		return ujson.encode({ 'status': 'converging' if len(nodes) > 0 else 'ready' })
+	return ujson.encode({ 'status': progress_status if len(nodes) > 0 else 'ready' })
 
 @app.route('/')
 @flask.ext.login.login_required
@@ -175,36 +246,51 @@ def index():
 	return flask.render_template(
 		'index.html',
 		envs = envs.itervalues(),
+		bootstrap_enabled = bootstrap_enabled,
 	)
 
-@app.route('/<env>')
-@flask.ext.login.login_required
-def env(env):
-	nodes = list(chef.Search('node', 'chef_environment:%s' % env, api = api))
-	nodes.sort(key = lambda node: node.object.name)
+def get_env_status(env, nodes, progress_status):
+	status = {}
+	output = {}
+	executing = False
 
 	env_greenlets = greenlets.get(env)
 	if env_greenlets is None:
 		env_greenlets = greenlets[env] = { }
 
-	status = {}
-	output = {}
 	for node in nodes:
-		greenlet = env_greenlets.get(node.object.name)
+		greenlet = env_greenlets.get(node)
 		if greenlet is None:
-			status[node.object.name] = 'ready'
-			output[node.object.name] = ''
+			status[node] = 'ready'
+			output[node] = ''
 		else:
-			s = 'converging'
+			s = progress_status
 			if greenlet.ready():
 				s = 'ready' if greenlet.value == 0 else 'error'
-			status[node.object.name] = s
-			output[node.object.name] = ''.join(greenlet.process.chunks)
+			else:
+				executing = True
+			status[node] = s
+			output[node] = ''.join(greenlet.process.chunks)
+	return status, output, executing
+
+@app.route('/<env>')
+@flask.ext.login.login_required
+def env(env):
+	if env == BOOTSTRAP_ENV:
+		flask.abort(400)
+	
+	if len(chef.Search('environment', 'name:' + env, api = api)) == 0:
+		flask.abort(404)
+
+	nodes = list(chef.Search('node', 'chef_environment:%s' % env, api = api))
+	nodes.sort(key = lambda n: n.object.name)
+
+	status, output, converging = get_env_status(env, (n.object.name for n in nodes), progress_status = 'converging')
 
 	return flask.render_template(
 		'env.html',
 		env = env,
-		converging = executing_processes(env) > 0,
+		converging = converging,
 		status = status,
 		output = output,
 		nodes = nodes,

@@ -77,10 +77,15 @@ button, a.button, input[type="button"], input[type="submit"]
 	margin-bottom: 2em;
 }
 
+input[type="text"]
+{
+	padding: 0.75em;
+	width: 20em;
+}
+
 #login input[type="text"], #login input[type="password"]
 {
 	width: 20em;
-	padding: 0.75em;
 }
 
 #login input[type="submit"]
@@ -105,7 +110,7 @@ button.ready, h2.ready button
 	background-color: #074;
 }
 
-button.converging, h2.converging button
+button.converging, h2.converging button, button.bootstrapping, h2.bootstrapping button
 {
 	background-color: #740;
 }
@@ -136,7 +141,7 @@ h2.ready
 	color: #074;
 }
 
-h2.converging
+h2.converging, h2.bootstrapping
 {
 	color: #740;
 }

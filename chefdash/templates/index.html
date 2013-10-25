@@ -1,9 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}Environments{% endblock %}
+{% block title %}environments{% endblock %}
 
 {% block header %}
-	<a class="right button" href="{{ url_for('logout') }}">Logout</a>
+	<a class="left button" href="{{ url_for('logout') }}">Logout</a>
+	{% if bootstrap_enabled %}
+		<a class="right button" href="{{ url_for('bootstrap_list') }}">Bootstrap</a>
+	{% endif %}
 	<h1>chefdash</h1>
 {% endblock %}
 

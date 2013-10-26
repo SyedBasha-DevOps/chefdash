@@ -124,7 +124,7 @@ def converge(env, node = None):
 	if node is not None:
 		nodes = { node: chef.Node(node, api = api), }
 	else:
-		nodes = { (row.object.name, row.object) for row in chef.Search('node', 'chef_environment:' + env, api = api) }
+		nodes = { row.object.name: row.object for row in chef.Search('node', 'chef_environment:' + env, api = api) }
 	
 	get_command = lambda n: ['ssh', '-o', 'StrictHostKeyChecking=no', n['ipaddress'], 'sudo', 'chef-client']
 

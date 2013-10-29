@@ -30,6 +30,7 @@ app.config.update(
 	LOG_FILE = None,
 	LOG_FORMAT = '%(asctime)s %(name)s\t%(levelname)s\t%(message)s',
 	LOG_LEVEL = logging.INFO,
+	ENABLE_BOOTSTRAP = True,
 )
 
 BOOTSTRAP_ENV = '__chefdash_bootstrap__'
@@ -135,38 +136,42 @@ def converge(env, node = None):
 		progress_status = 'converging',
 	)
 
-if bootstrap_enabled:
-	@app.route('/bootstrap')
-	@flask.ext.login.login_required
-	def bootstrap_list():
-		nodes = greenlets.get(BOOTSTRAP_ENV, {}).keys()
-		status, output, executing = get_env_status(BOOTSTRAP_ENV, nodes, progress_status = 'bootstrapping')
-		return flask.render_template(
-			'bootstrap.html',
-			status = status,
-			output = output,
-			nodes = nodes,
-		)
+@app.route('/bootstrap')
+@flask.ext.login.login_required
+def bootstrap_list():
+	if !bootstrap_enabled || !app.config.ENABLE_BOOTSTRAP:
+		flask.abort(400)
 
-	@app.route('/bootstrap/<ip>', methods = ['POST'])
-	@flask.ext.login.login_required
-	def bootstrap(ip):
+	nodes = greenlets.get(BOOTSTRAP_ENV, {}).keys()
+	status, output, executing = get_env_status(BOOTSTRAP_ENV, nodes, progress_status = 'bootstrapping')
+	return flask.render_template(
+		'bootstrap.html',
+		status = status,
+		output = output,
+		nodes = nodes,
+	)
 
-		if len(processes(BOOTSTRAP_ENV, ip, only_executing = True)) > 0:
-			return ujson.encode({ 'status': 'bootstrapping' })
+@app.route('/bootstrap/<ip>', methods = ['POST'])
+@flask.ext.login.login_required
+def bootstrap(ip):
+	if !bootstrap_enabled || !app.config.ENABLE_BOOTSTRAP:
+		flask.abort(400)
 
-		if len(chef.Search('node', 'ipaddress:%s OR fqdn:%s OR hostname:%s' % (ip, ip, ip), api = api)) > 0:
-			broadcast(BOOTSTRAP_ENV, { 'host': ip, 'status': 'ready', 'data': 'A node already exists at this address.\n' })
-			return ujson.encode({ 'status': 'ready' })
+	if len(processes(BOOTSTRAP_ENV, ip, only_executing = True)) > 0:
+		return ujson.encode({ 'status': 'bootstrapping' })
 
-		get_command = lambda ip: ['knife', 'bootstrap', '--sudo', ip]
+	if len(chef.Search('node', 'ipaddress:%s OR fqdn:%s OR hostname:%s' % (ip, ip, ip), api = api)) > 0:
+		broadcast(BOOTSTRAP_ENV, { 'host': ip, 'status': 'ready', 'data': 'A node already exists at this address.\n' })
+		return ujson.encode({ 'status': 'ready' })
 
-		return _run(
-			{ ip: ip, },
-			get_command,
-			env = BOOTSTRAP_ENV,
-			progress_status = 'bootstrapping',
-		)
+	get_command = lambda ip: ['knife', 'bootstrap', '--sudo', ip]
+
+	return _run(
+		{ ip: ip, },
+		get_command,
+		env = BOOTSTRAP_ENV,
+		progress_status = 'bootstrapping',
+	)
 
 def _run(nodes, get_command, env, progress_status):
 	# nodes: dictionary of node names mapped to node objects
@@ -245,7 +250,7 @@ def index():
 	return flask.render_template(
 		'index.html',
 		envs = envs.itervalues(),
-		bootstrap_enabled = bootstrap_enabled,
+		bootstrap_enabled = bootstrap_enabled && app.config.ENABLE_BOOTSTRAP,
 	)
 
 def get_env_status(env, nodes, progress_status):
@@ -272,7 +277,7 @@ def get_env_status(env, nodes, progress_status):
 			output[node] = ''.join(greenlet.process.chunks)
 	return status, output, executing
 
-@app.route('/<env>')
+@app.route('/env/<env>')
 @flask.ext.login.login_required
 def env(env):
 	if env == BOOTSTRAP_ENV:

@@ -11,7 +11,7 @@ With chefdash you can:
 Planned Features
 ----------------
 
-* Provide an alternative to the horrendous Chef Web UI JSON editor
+* Provide an alternative to the Chef Web UI JSON editor
 * Expose knife ssh functionality for arbitrary commands
 
 Install

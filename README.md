@@ -111,3 +111,9 @@ chefdash can bootstrap new nodes if you set it up correctly.
 	```
 
 	You should see a "bootstrap" button on the homepage.
+
+> chefdash checks for the existence of knife before enabling the bootstrap button. Don't like it? Just add this line to `/etc/chefdash/chefdash.py`:
+> 
+> ```python
+> ENABLE_BOOTSTRAP = False
+> ```

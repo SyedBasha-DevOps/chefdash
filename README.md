@@ -8,6 +8,12 @@ With chefdash you can:
 * Run `chef-client` on all nodes in a Chef environment simultaneously, or on a single node
 * View output in realtime and quickly see if any nodes failed
 
+Planned Features
+----------------
+
+* Provide an alternative to the horrendous Chef Web UI JSON editor
+* Expose knife ssh functionality for arbitrary commands
+
 Install
 -------
 

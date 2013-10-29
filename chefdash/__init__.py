@@ -139,7 +139,7 @@ def converge(env, node = None):
 @app.route('/bootstrap')
 @flask.ext.login.login_required
 def bootstrap_list():
-	if !bootstrap_enabled || !app.config.ENABLE_BOOTSTRAP:
+	if not bootstrap_enabled || not app.config.ENABLE_BOOTSTRAP:
 		flask.abort(400)
 
 	nodes = greenlets.get(BOOTSTRAP_ENV, {}).keys()
@@ -154,7 +154,7 @@ def bootstrap_list():
 @app.route('/bootstrap/<ip>', methods = ['POST'])
 @flask.ext.login.login_required
 def bootstrap(ip):
-	if !bootstrap_enabled || !app.config.ENABLE_BOOTSTRAP:
+	if not bootstrap_enabled || not app.config.ENABLE_BOOTSTRAP:
 		flask.abort(400)
 
 	if len(processes(BOOTSTRAP_ENV, ip, only_executing = True)) > 0:

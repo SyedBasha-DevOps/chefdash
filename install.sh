@@ -2,6 +2,7 @@
 
 set -u
 set -e
+set -o pipefail
 
 # Run this as root
 if [[ $EUID -ne 0 ]]; then

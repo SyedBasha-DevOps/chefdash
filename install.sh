@@ -15,7 +15,7 @@ dpkg-query -l | grep python-software-properties || (apt-get update && apt-get in
 add-apt-repository 'deb http://nginx.org/packages/ubuntu/ precise nginx'
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys ABF5BD827BD9BF62
 apt-get update
-apt-get -y install build-essential python-dev libevent-dev python-pip nginx
+apt-get -y install build-essential python-dev libevent-dev python-pip nginx ruby
 
 # Install python dependencies
 pip install -r requirements.txt

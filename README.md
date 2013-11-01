@@ -1,7 +1,7 @@
 chefdash
 ========
 
-chefdash is a simple dashboard for tracking [Chef](http://www.opscode.com/chef/) runs across a cluster.
+chefdash is a simple dashboard for tracking [Chef](http://www.opscode.com/chef/) runs across a cluster. [View a demo](https://vimeo.com/78320803).
 
 With chefdash you can:
 

@@ -7,6 +7,7 @@ With chefdash you can:
 
 * Run `chef-client` on all nodes in a Chef environment simultaneously, or on a single node
 * View output in realtime and quickly see if any nodes failed
+* Automatically bootstrap new nodes
 
 Planned Features
 ----------------

@@ -1,3 +1,5 @@
+<img src="http://sidebolt.github.io/chefdash/images/chefdash.png" alt="chefdash" />
+
 chefdash
 ========
 

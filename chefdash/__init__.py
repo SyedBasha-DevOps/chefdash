@@ -328,15 +328,16 @@ def urlquote(url):
 
 @app.route('/login', methods = ['GET', 'POST'])
 def login():
+	request = flask.request
 	if flask.ext.login.current_user.is_authenticated():
 		return flask.redirect(request.args.get('next') or flask.url_for('index'))
 
-	username = flask.request.form.get('username')
-	remember = flask.request.form.get('remember') == 'on'
+	username = request.form.get('username')
+	remember = request.form.get('remember') == 'on'
 
 	if username is not None:
 
-		password = flask.request.form.get('password')
+		password = request.form.get('password')
 
 		auth_result = ujson.decode(api.request('POST', '/authenticate_user', data = ujson.encode({ 'name': username, 'password': password })))
 
@@ -344,21 +345,21 @@ def login():
 
 			flask.ext.login.login_user(User(username), remember = remember)
 
-			return flask.redirect(flask.request.args.get('next') or flask.url_for('index'))
+			return flask.redirect(request.args.get('next') or flask.url_for('index'))
 
 		else:
 			return flask.render_template('login.html',
 				username = username,
 				error = True,
 				remember = remember,
-				next = flask.request.args.get('next'),
+				next = request.args.get('next'),
 			)
 
 	return flask.render_template('login.html',
 		username = None,
 		error = False,
 		remember = remember,
-		next = flask.request.args.get('next'),
+		next = request.args.get('next'),
 	)
 
 @app.route('/logout')

@@ -90,6 +90,12 @@ function connect(url)
 	};
 }
 
+setInterval(function()
+{
+	if (ws != null && ws.readyState == 1)
+		ws.send(''); // Keep websocket alive
+}, 20000);
+
 $(document).ready(function()
 {
 	$('h2 button').click(function(event)
